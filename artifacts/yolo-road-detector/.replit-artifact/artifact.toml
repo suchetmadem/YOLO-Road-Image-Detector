@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "YOLO Road Image Obstacle Detector"
+description = "A focused road-scene image detector that lets users upload or drag in an image, runs the supplied YOLO model, and shows labeled car and truck detections with confidence scores."
+version = "1.0.0"
+id = "artifacts/yolo-road-detector"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25215
+
+[services.development]
+run = "pnpm --filter @workspace/yolo-road-detector run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/yolo-road-detector", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/yolo-road-detector/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25215"
+BASE_PATH = "/"

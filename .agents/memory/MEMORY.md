@@ -1,0 +1,1 @@
+- [Artifact worker paths](worker-paths.md) — resolve auxiliary workers from both workspace-root and artifact-local paths because managed service working directories can differ.
