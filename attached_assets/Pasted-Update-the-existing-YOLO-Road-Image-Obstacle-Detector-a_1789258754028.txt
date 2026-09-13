@@ -1,0 +1,122 @@
+Update the existing YOLO Road Image Obstacle Detector app with the following validation, safety, and usability constraints. Keep the current design and functionality unless a change is required for these features.
+
+### 1. Image Upload Constraints
+
+At the image upload stage:
+
+* Only allow image files in these formats:
+
+  * `.png`
+  * `.jpg`
+  * `.jpeg`
+* Reject all other file types.
+* Validate both the file extension and MIME type before processing.
+* Show a clear error message for unsupported files:
+  **"Unsupported file type. Please upload a PNG or JPG image."**
+* Set a reasonable maximum upload size, such as **10 MB**.
+* If the file is too large, display:
+  **"Image is too large. Please upload an image smaller than 10 MB."**
+* Make sure the uploaded file is actually a readable image before sending it to the YOLO model.
+* If the image is corrupted or cannot be read, display:
+  **"This image could not be processed. Please upload another image."**
+* Do not allow the Detect button to run unless a valid image has been uploaded.
+
+### 2. Image Quality / Limitations Check
+
+At the upload stage, display a short **"For Best Results"** or **"Detection Limitations"** notice.
+
+Include the following:
+
+**For best detection results:**
+
+* Use a clear, well-lit road image.
+* Objects that are very far away may not be detected.
+* Objects that are partially blocked or heavily occluded may not be detected.
+* Very dark, blurry, low-resolution, or overexposed images may reduce detection accuracy.
+* The model may occasionally miss objects or classify them incorrectly.
+
+This should be visible near the image uploader, but should not prevent the user from uploading an image.
+
+### 3. Detection Processing
+
+When the user clicks **Detect Obstacles**:
+
+* Show a loading state such as:
+  **"Analyzing image..."**
+* Disable the Detect button while inference is running so the user cannot start multiple detections at once.
+* Run the YOLO object detector on the uploaded image.
+* Do not end processing prematurely before the model has completed inference.
+* Do NOT create an infinite loop that repeatedly processes the same image until something is detected.
+* Complete the full detection process once and then evaluate the results.
+* Use the model's configured confidence threshold to determine valid detections.
+* Ignore detections below the confidence threshold.
+
+### 4. No Objects Detected
+
+If the YOLO model finishes processing and finds no valid objects:
+
+Do not treat this as an app error.
+
+Instead, display the original uploaded image without bounding boxes and show:
+
+**"No objects detected."**
+
+Under that, show:
+
+**"Try another image with clearer lighting, closer objects, or less obstruction."**
+
+Also provide an **Upload Another Image** or **Try Another Image** button.
+
+The app should never remain stuck processing simply because no object was detected.
+
+### 5. Detection Results
+
+When objects are detected:
+
+Display the processed image with:
+
+* A bounding box around each detected object.
+* The detected object's class label.
+* The confidence score for each detection.
+* Confidence displayed in an easy-to-read format, such as:
+  **Car — 92%**
+  **Truck — 87%**
+
+Only display classes supported by the current model.
+
+Under or beside the image, include a simple detection summary such as:
+
+**Objects Detected: 4**
+
+* Cars: 3
+* Trucks: 1
+
+Only show counts for classes that the model actually supports.
+
+### 6. Detector Explanation
+
+Add a small section titled:
+
+**How It Works**
+
+Use a short explanation similar to:
+
+"YOLO (You Only Look Once) is an object detection model that analyzes an entire image and predicts the location and type of objects it recognizes. The detector places bounding boxes around detected objects and provides a confidence score showing how certain the model is about each prediction."
+
+Keep this explanation short and beginner-friendly.
+
+### 7. General App Constraints
+
+Also make sure:
+
+* The app handles invalid uploads without crashing.
+* The app handles zero detections without crashing.
+* The app handles model errors gracefully.
+* Display a user-friendly error instead of raw Python/server errors.
+* Keep the original uploaded image available so the user can compare it with the detected version.
+* Add a Reset / Upload New Image button.
+* Do not allow multiple detection requests to run simultaneously.
+* Preserve the current clean layout and existing app styling.
+* Do not remove or rewrite working YOLO/model code unless necessary to implement these features.
+* Do not change the trained model or its classes unless required.
+* Make the changes directly to the existing app rather than rebuilding the app from scratch.

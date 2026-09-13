@@ -37,6 +37,10 @@ type RoadImageDetection = {
   detections: Detection[];
 };
 
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const ACCEPTED_EXTENSIONS = new Set(['png', 'jpg', 'jpeg']);
+const ACCEPTED_MIME_TYPES = new Set(['image/png', 'image/jpeg']);
+
 const queryClient = new QueryClient();
 
 function getErrorMessage(error: unknown) {
@@ -56,6 +60,41 @@ function formatConfidence(confidence: number) {
   return `${Math.round(confidence * 100)}%`;
 }
 
+function getFileExtension(filename: string) {
+  return filename.split('.').pop()?.toLowerCase() ?? '';
+}
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result);
+      } else {
+        reject(new Error('The file could not be read.'));
+      }
+    };
+    reader.onerror = () => reject(new Error('The file could not be read.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function validateImageReadable(file: File) {
+  return new Promise<void>((resolve, reject) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve();
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('That image could not be read. Please choose a valid PNG or JPG file.'));
+    };
+    image.src = objectUrl;
+  });
+}
+
 function AppShell() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedImage, setSelectedImage] = useState<RoadImageInput | null>(null);
@@ -67,26 +106,27 @@ function AppShell() {
   const isAnalyzing = detectMutation.isPending;
   const errorMessage = localError || (detectMutation.isError ? getErrorMessage(detectMutation.error) : '');
 
-  const selectFile = (file?: File) => {
+  const selectFile = async (file?: File) => {
     if (!file) return;
     setLocalError('');
     setDetection(null);
-    if (!file.type.startsWith('image/')) {
-      setLocalError('Please choose an image file in JPG, PNG, or WEBP format.');
+    setSelectedImage(null);
+    const extension = getFileExtension(file.name);
+    if (!ACCEPTED_EXTENSIONS.has(extension) || (file.type && !ACCEPTED_MIME_TYPES.has(file.type))) {
+      setLocalError('Unsupported file type. Please choose a PNG, JPG, or JPEG image.');
       return;
     }
-    if (file.size > 12 * 1024 * 1024) {
-      setLocalError('That file is larger than 12 MB. Choose a smaller road image.');
+    if (file.size > MAX_IMAGE_BYTES) {
+      setLocalError('That image is larger than 10 MB. Choose a smaller PNG or JPG image.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setSelectedImage({ imageDataUrl: reader.result, filename: file.name });
-      }
-    };
-    reader.onerror = () => setLocalError('We could not read that file. Please try another image.');
-    reader.readAsDataURL(file);
+    try {
+      await validateImageReadable(file);
+      const imageDataUrl = await readFileAsDataUrl(file);
+      setSelectedImage({ imageDataUrl, filename: file.name });
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : 'That image could not be read. Please choose a valid PNG or JPG file.');
+    }
   };
 
   const runDetection = () => {
@@ -166,10 +206,10 @@ function AppShell() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept=".png,.jpg,.jpeg"
                 className="hidden"
                 data-testid="input-road-image"
-                onChange={(event) => selectFile(event.target.files?.[0])}
+                onChange={(event) => void selectFile(event.target.files?.[0])}
               />
 
               {!selectedImage ? (
@@ -180,7 +220,7 @@ function AppShell() {
                   onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }}
                   onDragOver={(event) => event.preventDefault()}
                   onDragLeave={() => setIsDragging(false)}
-                  onDrop={(event) => { event.preventDefault(); setIsDragging(false); selectFile(event.dataTransfer.files?.[0]); }}
+                  onDrop={(event) => { event.preventDefault(); setIsDragging(false); void selectFile(event.dataTransfer.files?.[0]); }}
                   className={`group relative mt-7 flex min-h-[285px] w-full flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed px-5 text-center transition-all ${isDragging ? 'border-primary bg-primary/10' : 'border-primary/35 bg-primary/[.035] hover:border-primary/70 hover:bg-primary/[.07]'}`}
                 >
                   <div className="absolute inset-6 rounded-lg border border-primary/10" />
@@ -189,7 +229,7 @@ function AppShell() {
                   </div>
                   <span className="relative text-sm font-extrabold text-foreground">{isDragging ? 'Release to inspect' : 'Drop your image here'}</span>
                   <span className="relative mt-2 text-xs text-muted-foreground">or click to browse your files</span>
-                  <span className="relative mt-6 font-mono text-[10px] uppercase tracking-[.12em] text-muted-foreground/75">JPG · PNG · WEBP / MAX 12 MB</span>
+                  <span className="relative mt-6 font-mono text-[10px] uppercase tracking-[.12em] text-muted-foreground/75">JPG · JPEG · PNG / MAX 10 MB</span>
                 </button>
               ) : (
                 <div className="image-checker relative mt-7 overflow-hidden rounded-xl border border-border">
@@ -207,6 +247,13 @@ function AppShell() {
                 </div>
               )}
 
+              <div className="mt-5 rounded-lg border border-accent/25 bg-accent/[.08] p-4">
+                <p className="font-mono text-[10px] font-medium uppercase tracking-[.14em] text-accent-foreground">Detection limitations</p>
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                  Best results require clear, well-lit images. Far-away, blurry, dark, low-resolution, or partially blocked objects may be missed or misclassified.
+                </p>
+              </div>
+
               {errorMessage && (
                 <div role="alert" data-testid="status-detection-error" className="mt-4 flex items-start gap-3 rounded-lg border border-destructive/25 bg-destructive/5 p-3.5 text-sm text-destructive">
                   <AlertTriangle size={17} className="mt-0.5 shrink-0" />
@@ -222,7 +269,7 @@ function AppShell() {
                   disabled={!selectedImage || isAnalyzing}
                   className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-extrabold text-primary-foreground shadow-[0_8px_18px_rgba(37,85,79,.18)] transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-[0_11px_22px_rgba(37,85,79,.24)] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0"
                 >
-                  {isAnalyzing ? <><span className="h-4 w-4 animate-pulse rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground" /> Reading frame</> : <><ScanLine size={17} /> Run detection</>}
+                  {isAnalyzing ? <><span className="h-4 w-4 animate-pulse rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground" /> Analyzing image...</> : <><ScanLine size={17} /> Detect Obstacles</>}
                 </button>
                 <button type="button" data-testid="button-reset-detection" onClick={reset} className="flex h-12 items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-bold text-foreground transition-colors hover:bg-secondary">
                   <RotateCcw size={16} /> {selectedImage ? 'Upload new image' : 'Reset'}
@@ -257,7 +304,7 @@ function AppShell() {
                     <div className="absolute inset-x-0 top-1/2 h-px bg-accent shadow-[0_0_18px_3px_hsl(var(--accent)/.5)] scan-line" />
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-primary">
                       <ScanLine size={28} className="mb-4 pulse-soft" />
-                      <p className="text-sm font-extrabold">Scanning the road scene</p>
+                      <p className="text-sm font-extrabold">Analyzing image...</p>
                       <p className="mt-1 font-mono text-[10px] uppercase tracking-[.15em] text-muted-foreground">Locating vehicles · running YOLO</p>
                     </div>
                   </div>
@@ -266,7 +313,7 @@ function AppShell() {
                     <div className="h-20 animate-pulse rounded-lg bg-muted" />
                   </div>
                 </div>
-              ) : detection ? (
+              ) : detection && detection.detections.length > 0 ? (
                 <div className="mt-7">
                   <div className="image-checker relative overflow-hidden rounded-xl border border-primary/25">
                     <img src={detection.imageDataUrl} alt="Road scene with detected vehicle boxes" className="aspect-[4/3] w-full object-contain" data-testid="img-detection-result" />
@@ -298,6 +345,19 @@ function AppShell() {
                     </div>
                   </div>
                 </div>
+              ) : detection ? (
+                <div data-testid="empty-detection-result" className="mt-7">
+                  <div className="image-checker relative overflow-hidden rounded-xl border border-border">
+                    <img src={selectedImage?.imageDataUrl ?? detection.imageDataUrl} alt="Original road scene with no detected objects" className="aspect-[4/3] w-full object-contain" data-testid="img-no-detection-result" />
+                  </div>
+                  <div className="mt-5 rounded-xl border border-accent/30 bg-accent/[.09] p-5">
+                    <p className="text-lg font-extrabold tracking-[-0.03em] text-foreground">No objects detected.</p>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">Try a clearer image with closer, better-lit, less-obstructed objects.</p>
+                    <button type="button" data-testid="button-try-another-image" onClick={reset} className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-extrabold text-primary-foreground transition-colors hover:bg-primary/90">
+                      <RotateCcw size={15} /> Try Another Image
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <div data-testid="empty-detection-state" className="mt-7 flex min-h-[390px] flex-col items-center justify-center rounded-xl border border-dashed border-primary/25 bg-primary/[.025] px-6 text-center">
                   <div className="relative mb-6 flex h-20 w-20 items-center justify-center rounded-[1.35rem] bg-secondary text-primary">
@@ -313,6 +373,29 @@ function AppShell() {
               )}
             </section>
           </div>
+
+          <section className="rise-in rise-in-delay-3 mt-8 rounded-[1.35rem] border border-border/90 bg-card/75 p-5 shadow-[var(--shadow-card)] backdrop-blur-sm sm:p-6" aria-labelledby="how-it-works-heading">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-sm">
+                <p className="mb-3 font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-primary">How it works</p>
+                <h2 id="how-it-works-heading" className="text-xl font-extrabold tracking-[-0.035em]">From pixels to a readable road scene.</h2>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:max-w-3xl lg:grid-cols-4">
+                {[
+                  ['01', 'Analyze', 'YOLO analyzes the uploaded image.'],
+                  ['02', 'Locate', 'Bounding boxes locate each object.'],
+                  ['03', 'Classify', 'Each box receives a class label.'],
+                  ['04', 'Score', 'Confidence scores show certainty.'],
+                ].map(([step, title, body]) => (
+                  <div key={step} className="border-l border-border pl-4">
+                    <p className="font-mono text-[10px] text-accent-foreground">{step}</p>
+                    <p className="mt-2 text-sm font-extrabold text-foreground">{title}</p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">{body}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
 
           <footer className="rise-in rise-in-delay-3 mt-8 flex flex-col gap-3 border-t border-border/70 pt-5 text-[11px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
             <span className="font-mono uppercase tracking-[.12em]">Roadwatch / Obstacle detector</span>
