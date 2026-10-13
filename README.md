@@ -29,7 +29,7 @@ flowchart LR
     D --> E["Bounding boxes and vehicle counts"]
 ```
 
-Technology stack: **TBD**
+Technology stack: Node.js 24 + TypeScript, Python for Machine learning and running a TensorFlow Keras YOLO Model, Open CV, NumPy, Replit, React/Vite 
 
 ## Suchet’s Contribution
 
@@ -41,17 +41,17 @@ The exact dependencies and commands must be confirmed from the repository.
 
 ```bash
 # Clone the repository
-git clone TBD
-cd TBD
+git clone https://replit.com/@suchetmadem1/YOLO-Road-Image-Detector
+cd YOLO-Road-Image-Detector 
 
 # Install dependencies
-TBD
+pip install tensorflow numpy opencv-python
 
 # Add or download the required model files
-TBD
+place your trained YOLO weights @ artifacts/api-server/model_assets/yolo_model.keras
 
 # Run the application
-TBD
+Open project in replit, press run
 ```
 
 ## Screenshots
