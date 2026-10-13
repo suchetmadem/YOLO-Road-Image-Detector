@@ -31,9 +31,9 @@ flowchart LR
 
 Technology stack: Node.js 24 + TypeScript, Python for Machine learning and running a TensorFlow Keras YOLO Model, Open CV, NumPy, Replit, React/Vite 
 
-## Suchet’s Contribution
 
-**TBD — add only Suchet’s confirmed contribution based on project records or Git history.**
+I built a YOLO v3 powered vehicle detection app. I started from pretrained weights and fine tuned the model on my own road images using transfer learning methods. The app is a full stack build - explain tech stack here -  It takes in an input of an uploaded road image and outputs bounding boxes, confidence scores, and counts.
+
 
 ## Setup
 
