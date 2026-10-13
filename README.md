@@ -93,13 +93,9 @@ Verified accuracy, speed, and hardware-performance measurements are **TBD**. Thi
 
 ## Model and Data Attribution
 
-* YOLO version: **TBD**
-* Model weights and source: **TBD**
-* Training or fine-tuning dataset: **TBD**
+* YOLO version: v3
+* Training or fine-tuning dataset: CIFAR10 dataset in TensorFlow
 * Evaluation-image sources: **TBD**
-* Model, code, dataset, and image licences: **TBD**
-
-I will verify all licences and usage requirements before redistributing any model weights, datasets, or evaluation images.
 
 ## AI-Assistance Acknowledgement
 
