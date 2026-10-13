@@ -8,9 +8,9 @@ Manually identifying vehicles in road images can be difficult, especially when r
 
 ## Live Demo
 
-**TBD — add the deployed app link here.**
 
-## Architecture
+https://replit.com/@suchetmadem1/YOLO-Road-Image-Detector
+
 
 My application processes an image using the following steps:
 
