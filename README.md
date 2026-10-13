@@ -58,11 +58,9 @@ Open project in replit, press run
 
 ### Upload Screen
 
-**TBD — add a screenshot of the image uploader and limitations notice.**
+<img width="1884" height="1167" alt="image" src="https://github.com/user-attachments/assets/e8ea9fd0-838c-4822-bca9-d1e1369ef812" />
 
-### Detection Results
 
-**TBD — add a screenshot showing bounding boxes, confidence scores, and car/truck counts.**
 
 ## Testing
 
